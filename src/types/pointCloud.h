@@ -32,7 +32,7 @@ public:
     pointCloud();
     ~pointCloud();
 
-    pcl::PointCloud<pcl::PointXYZ>* pclCloud();
+    pcl::PointCloud<pcl::PointXYZ>* pclCloud;
     void T( Eigen::Isometry3f t);
     std::vector<cloudData> cloud;
     cv::Mat depthImage;

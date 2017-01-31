@@ -1,4 +1,16 @@
 #include "calibrationMatrix.h"
+#include <math.h>
+#include <limits>
+
+
+float interpolate ( float input , float input_start, float input_end, float output_start, float output_end){
+
+  float output;
+  output = output_start + ((output_end - output_start) / (input_end - input_start)) * (input - input_start);
+
+  return output;
+
+}
 
 calibrationMatrix::calibrationMatrix(int rows, int cols, int maxDepth, int tileSize, int depthRes){
     useKernel=false;
@@ -25,17 +37,17 @@ calibrationMatrix::calibrationMatrix(int rows, int cols, int maxDepth, int tileS
         }
     }
 
-    _staticData = new innertype**[layers];
-    for (int i=0; i<layers; i++){
-        _staticData[i] = new innertype* [rows];
-        for (int j=0; j< rows; j++){
-            _staticData[i][j]=new innertype[cols];
-            for (int k=0; k< cols; k++){
-                _staticData[i][j][k]=1.0f;
-
-            }
-        }
-    }
+    // _staticData = new innertype**[layers];
+    // for (int i=0; i<layers; i++){
+    //     _staticData[i] = new innertype* [rows];
+    //     for (int j=0; j< rows; j++){
+    //         _staticData[i][j]=new innertype[cols];
+    //         for (int k=0; k< cols; k++){
+    //             _staticData[i][j][k]=1.0f;
+    //
+    //         }
+    //     }
+    // }
 
 
     _hits = new innertype**[layers];
@@ -77,13 +89,13 @@ void calibrationMatrix::clear(){
     delete(_data);
 
 
-    for (int i=0; i<layers; i++){
-        for (int j=0; j< rows; j++){
-            delete(_staticData[i][j]);
-        }
-        delete(_staticData[i]);
-    }
-    delete(_staticData);
+    // for (int i=0; i<layers; i++){
+    //     for (int j=0; j< rows; j++){
+    //         delete(_staticData[i][j]);
+    //     }
+    //     delete(_staticData[i]);
+    // }
+    // delete(_staticData);
 
 
     for (int i=0; i<layers; i++){
@@ -116,45 +128,63 @@ innertype calibrationMatrix::cell(int r, int c, int d){
 
 void calibrationMatrix::cell(int r, int c, int d, innertype mply){
 //    std::cout<<"cell "<<d<<" "<<r<<" "<<c<<std::endl;
-    for(int i=-2;i<3;i++){
-        for(int j=-2;j<3;j++){
-            for(int k=-2;k<3;k++){
-                if(     (d/depthRes+i)>=0 &&
-                        (r/tileSize+j)>=0 &&
-                        (c/tileSize+k)>=0 &&
-                        (d/depthRes+i)<layers &&
-                        (r/tileSize+j)<rows &&
-                        (c/tileSize+k)<cols){
-                    _data[d/depthRes+i][r/tileSize+j][c/tileSize+k]+=mply;//*(1-abs(j));
-                    _hits[d/depthRes+i][r/tileSize+j][c/tileSize+k]+=1.0f;
-                    //std::cout<<"\t\tGOOD "<<_data[d/depthRes+i][r/tileSize+j][c/tileSize+k]<<" "<< _hits[d/depthRes+i][r/tileSize+j][c/tileSize+k]<<" "<<_data[d/depthRes+i][r/tileSize+j][c/tileSize+k]/_hits[d/depthRes+i][r/tileSize+j][c/tileSize+k]<<  std::endl;
-                }
-                else{
-//                    std::cout<<"\tfail @ "<< (d/depthRes+i)<<" (maxdepth:"<<layers<<") "<<
-//                                           (r/tileSize+j)<<" (rows: "<<rows<<") "<<
-//                                           (c/tileSize+k)<<" (cols: "<<cols<<") "<<std::endl;
-                }
-                //_covariance[(d+i)/depthRes][(r+j)/tileSize][(c+k)/tileSize]+=mply*mply;
-            }
-        }
+//     for(int i=-2;i<3;i++){
+//         for(int j=-2;j<3;j++){
+//             for(int k=-2;k<3;k++){
+//                 if(     (d/depthRes+i)>=0 &&
+//                         (r/tileSize+j)>=0 &&
+//                         (c/tileSize+k)>=0 &&
+//                         (d/depthRes+i)<layers &&
+//                         (r/tileSize+j)<rows &&
+//                         (c/tileSize+k)<cols){
+//                     _data[d/depthRes+i][r/tileSize+j][c/tileSize+k]+=mply;//*(1-abs(j));
+//                     _hits[d/depthRes+i][r/tileSize+j][c/tileSize+k]+=1.0f;
+//                     //std::cout<<"\t\tGOOD "<<_data[d/depthRes+i][r/tileSize+j][c/tileSize+k]<<" "<< _hits[d/depthRes+i][r/tileSize+j][c/tileSize+k]<<" "<<_data[d/depthRes+i][r/tileSize+j][c/tileSize+k]/_hits[d/depthRes+i][r/tileSize+j][c/tileSize+k]<<  std::endl;
+//                 }
+//                 else{
+// //                    std::cout<<"\tfail @ "<< (d/depthRes+i)<<" (maxdepth:"<<layers<<") "<<
+// //                                           (r/tileSize+j)<<" (rows: "<<rows<<") "<<
+// //                                           (c/tileSize+k)<<" (cols: "<<cols<<") "<<std::endl;
+//                 }
+//                 //_covariance[(d+i)/depthRes][(r+j)/tileSize][(c+k)/tileSize]+=mply*mply;
+//             }
+//         }
+//     }
+
+    //outlier reection
+    if (mply>1.25 || mply < 0.85){
+      return;
     }
+
+
+    //No artifical padding
+
+    if(     (d/depthRes)>=0 &&
+           (r/tileSize)>=0 &&
+           (c/tileSize)>=0 &&
+           (d/depthRes)<layers &&
+           (r/tileSize)<rows &&
+           (c/tileSize)<cols){
+    _data[d/depthRes][r/tileSize][c/tileSize]+=mply;//*(1-abs(j));
+    _hits[d/depthRes][r/tileSize][c/tileSize]+=1.0f;
+  }
 
 
 }
 
 void calibrationMatrix::syncToFloat(){
 
-    for (int i=0; i<layers; i++){
-        for (int j=0; j< rows; j++){
-            for (int k=0; k< cols; k++){
-                _staticData[i][j][k]=_data[i][j][k]/_hits[i][j][k];
-            }
-        }
-    }
+    // for (int i=0; i<layers; i++){
+    //     for (int j=0; j< rows; j++){
+    //         for (int k=0; k< cols; k++){
+    //             _staticData[i][j][k]=_data[i][j][k]/_hits[i][j][k];
+    //         }
+    //     }
+    // }
 }
 
 innertype calibrationMatrix::getFloat(int r, int c, int d){
-    return _staticData[d/depthRes][r/tileSize][c/tileSize];
+    return 1.0f;
 }
 
 void calibrationMatrix::increment(int r, int c, int d){
@@ -304,6 +334,13 @@ void calibrationMatrix::serializeNN(char* filename){
 
 calibrationMatrix::calibrationMatrix(char* filename){
     std::ifstream myfile (filename);
+
+    if (!myfile.is_open()){
+      std::cout << "calibration file not found" << std::endl;
+      return;
+    }
+
+
     int layers;
     int rows;
     int cols;
@@ -332,17 +369,17 @@ calibrationMatrix::calibrationMatrix(char* filename){
         }
     }
 
-    _staticData = new innertype**[layers];
-    for (int i=0; i<layers; i++){
-        _staticData[i] = new innertype* [rows];
-        for (int j=0; j< rows; j++){
-            _staticData[i][j]=new innertype[cols];
-            for (int k=0; k< cols; k++){
-                _staticData[i][j][k]=1.0f;
-
-            }
-        }
-    }
+    // _staticData = new innertype**[layers];
+    // for (int i=0; i<layers; i++){
+    //     _staticData[i] = new innertype* [rows];
+    //     for (int j=0; j< rows; j++){
+    //         _staticData[i][j]=new innertype[cols];
+    //         for (int k=0; k< cols; k++){
+    //             _staticData[i][j][k]=1.0f;
+    //
+    //         }
+    //     }
+    // }
 
 
     _hits = new innertype**[layers];
@@ -442,35 +479,144 @@ calibrationMatrix* calibrationMatrix::downsample(int dxy, int dd){
 }
 
 void calibrationMatrix::dumpSensorImages(){
+
+  //Different type of output coloring
+  //find the minimum (disregarding the 0) multiplier and the maximum multiplier
+    //the multipler with 0 should correspond to a value of 127 in the error image
+
+    float min=std::numeric_limits<float>::max();
+    float max=std::numeric_limits<float>::min();
+
     for (int i=0; i<layers; i++){
-        cv::Mat errorImage(rows,cols,CV_32FC1);
-        cv::Mat error(rows,cols,CV_8UC1);
-        errorImage=cv::Mat::zeros(rows,cols,CV_32FC1);
-        cv::Point p;
         for (int j=0; j< rows; j++){
             for (int k=0; k< cols; k++){
-                p.y=j;
-                p.x=k;
-                innertype v= _data[i][j][k]/_hits[i][j][k];
+                float v= _data[i][j][k]/_hits[i][j][k];
                 if(_hits[i][j][k]==1)v=0;
-                errorImage.at<innertype>(p)=(v-1)*3000+127;
+
+                if (v < min && v!=0) min=v;
+                if (v > max && v!=0) max=v;
+
+                }
+
             }
-        }
-        cv::flip(errorImage,errorImage,0);
-        double min;
-        double max;
-        errorImage.convertTo(error,CV_8UC1);
-        cv::minMaxIdx(error,&min,&max);
-        std::cout <<"["<<i<<"]"<< " m: "<<min << " M: "<<max<<std::endl;
+
+      }
+
+    std::cout << "min max is" << min << " " << max << std::endl;
+
+    //values from 1 to max should be mapped to range 127 to 255
+    //values from min to 1 should be mapped to range 0 to 127
+    //then we can choose a colormap like the COLORMAP_JET that assigns red for the points that are pushed and blue for the ones that are pulled towards the camera
+
+    for (int i=0; i<layers; i++){
+
+        cv::Mat errorImage(rows,cols,CV_8UC1);
+        errorImage=cv::Mat::ones(rows,cols,CV_8UC1);
+        errorImage=errorImage*127; //Initialize it at 127 to indicate that no multiplier is applied (no pushing nor pulling)
+
+        for (int j=0; j< rows; j++){
+            for (int k=0; k< cols; k++){
+                float v= _data[i][j][k]/_hits[i][j][k];
+                if(_hits[i][j][k]==1)v=0;
+
+                int interpolated_value;
+
+                if (v>1 && v!=0){
+                    interpolated_value= interpolate (v, 1,max, 127,255);
+                    errorImage.at<uchar>(j,k)=interpolated_value;
+                }
+                if (v<1 && v!=0){
+                    interpolated_value= interpolate (v, min,1, 0,127);
+                    errorImage.at<uchar>(j,k)=interpolated_value;
+                }
+
+
+
+             }
+
+         }
+
         cv::Mat dest;
         char filename[50];
-        for(int colormap =0;colormap<1;colormap++){
-            cv::applyColorMap(error,dest,colormap);
-            sprintf(filename,"layer_%d.pgm",i);
-            cv::imwrite(filename,dest);
+        cv::flip(errorImage,errorImage,0);
+        cv::applyColorMap(errorImage,dest,cv::COLORMAP_JET);
+
+        //all the pixels that are at 127 mean that they do not have any multipler so we assing them a color black so it doesnt interfere with the other colors
+        cv::Vec3b black;
+        black[0]=0;
+        black[1]=0;
+        black[2]=0;
+        for (int j=0; j< rows; j++){
+            for (int k=0; k< cols; k++){
+                if(errorImage.at<uchar>(j,k)==127){
+                    //dest.at<cv::Vec3b>(j,k)=black;
+                }
+
+             }
         }
 
-    }
+
+        //assign to red all the ones that don't have any data (hits==1)
+        cv::Vec3b red;
+        red[0]=255;
+        red[1]=0;
+        red[2]=0;
+        for (int j=0; j< rows; j++){
+            for (int k=0; k< cols; k++){
+                if(_hits[i][j][k]==1.0f){
+                    dest.at<cv::Vec3b>(j,k)=red;
+                }
+
+             }
+        }
+
+
+        sprintf(filename,"layer_%d.pgm",i);
+        cv::imwrite(filename,dest);
+        std::cout << "saved image at layer: " << i <<std::endl;
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+    // for (int i=0; i<layers; i++){
+    //     cv::Mat errorImage(rows,cols,CV_32FC1);
+    //     cv::Mat error(rows,cols,CV_8UC1);
+    //     errorImage=cv::Mat::zeros(rows,cols,CV_32FC1);
+    //     cv::Point p;
+    //     for (int j=0; j< rows; j++){
+    //         for (int k=0; k< cols; k++){
+    //             p.y=j;
+    //             p.x=k;
+    //             innertype v= _data[i][j][k]/_hits[i][j][k];
+    //             if(_hits[i][j][k]==1)v=0;
+    //             errorImage.at<innertype>(p)=(v-1)*3000+127;
+    //         }
+    //     }
+    //     cv::flip(errorImage,errorImage,0);
+    //     double min;
+    //     double max;
+    //     errorImage.convertTo(error,CV_8UC1);
+    //     cv::minMaxIdx(error,&min,&max);
+    //     std::cout <<"["<<i<<"]"<< " m: "<<min << " M: "<<max<<std::endl;
+    //     cv::Mat dest;
+    //     char filename[50];
+    //     for(int colormap =0;colormap<1;colormap++){
+    //         cv::applyColorMap(error,dest,colormap);
+    //         sprintf(filename,"layer_%d.pgm",i);
+    //         cv::imwrite(filename,dest);
+    //     }
+    //
+    // }
 }
 
 
@@ -540,8 +686,3 @@ void calibrationMatrix::dumpCovariance(){
 
     }
 }
-
-
-
-
-

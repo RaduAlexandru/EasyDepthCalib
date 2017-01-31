@@ -4,6 +4,7 @@ project(easydepthcalibration)
 find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs std_msgs cv_bridge image_transport)
 
 SET(CMAKE_BUILD_TYPE Release)
+#SET(CMAKE_BUILD_TYPE Debug)
 SET(CMAKE_CXX_FLAGS "-O3")
 SET(CMAKE_C_FLAGS "-O3")
 

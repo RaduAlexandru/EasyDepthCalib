@@ -41,7 +41,7 @@ void callback(const sensor_msgs::ImageConstPtr &imgPtr){
     cvImageFromROS->image.copyTo(image);
     diff->image.copyTo(DiffImage);
     out_msg.header   = imgPtr->header;
-    out_msg.encoding = "mono16";
+    out_msg.encoding =  "16UC1"; //  sensor_msgs::image_encodings::MONO16; //"mono16";
 
 
     int cols=image.cols;
@@ -53,6 +53,14 @@ void callback(const sensor_msgs::ImageConstPtr &imgPtr){
             p.x=i;
             p.y=j;
             v=((float)image.at<ushort>(p));
+
+            //cap the depth at 2 meters
+            if (v>2000){
+              v=0;
+              image.at<ushort>(p)=(ushort)v;
+              continue;
+            }
+
             v*=multiplier->cell(p.y,p.x,v);
             image.at<ushort>(p)=(ushort)v;
         }
@@ -66,20 +74,16 @@ void callback(const sensor_msgs::ImageConstPtr &imgPtr){
 
 }
 
-void camerainfoCb(const sensor_msgs::CameraInfoConstPtr&  info){
-    pub_info_left.publish(info);
-}
-
 
 int main(int argc, char **argv)
 {
-    if(argc<4){
+    if(argc<3){
         std::cout<<"This ROS NODE is intended to use in realtime with a /depth/image_raw topic"<<std::endl;
-        std::cout<<"The node will subscribe to a DEPTH IMAGE RAW topic and to a CAMERA INFO of such camera and will republish (using image transport) the undistorted data"<<std::endl;
+        std::cout<<"The node will subscribe to a DEPTH IMAGE RAW topic and will republish the undistorted data"<<std::endl;
         std::cout<<"Usage:"<<std::endl;
-        std::cout<<"rosrun easydepthcalibration driver_node _sub:=/camera_topic _pub:=/calibrated _calib:=calibration_filename.ext"<<std::endl;
+        std::cout<<"rosrun easydepthcalibration driver_node _sub:=/camera/depth/image_raw _pub:=/calibrated/ _calib:=calibration_filename.ext"<<std::endl;
         std::cout<<"Note:"<<std::endl;
-        std::cout<<"You don't have to provide the full topic name, </camera_topic> means that the node will subscribe to both /camera_topic/depth/image_raw and /camera_topic/depth/camera_info"<<std::endl;
+
         exit(1);
     }
     ros::init(argc, argv, "xtionDriver",ros::init_options::AnonymousName);
@@ -95,11 +99,7 @@ int main(int argc, char **argv)
     pub = it->advertise(_pub+"/image_raw", 10);
     pub2 = it->advertise(_pub+"/image_raw_diff", 10);
     std::cout<<"TOPIC SUBSCRIBED TO: "<<_sub <<std::endl;
-    std::cout<<"TOPIC SUBSCRIBED TO: "<<_sub <<std::endl;
-    pub_info_left = n.advertise<sensor_msgs::CameraInfo>(_pub+"/camera_info", 1);
-    image_transport::Subscriber sub = test->subscribe(_sub+"/image_raw", 1, &callback);
-    ros::Subscriber sub2=n.subscribe(_sub+"/camera_info", 100, camerainfoCb);
+    image_transport::Subscriber sub = test->subscribe(_sub, 1, &callback);
     ros::spin();
     return 1;
 }
-

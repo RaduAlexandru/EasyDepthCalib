@@ -46,7 +46,19 @@ void imageCb(const sensor_msgs::ImageConstPtr& msg_1)
     imageNumber++;
     //show stuff
     //cv::imshow(WINDOW1, cv_ptr_1->image);
-    //cv::waitKey(3);
+    //cv::waitKey(1);
+
+    //cv::Mat img_cv;
+    //cv::Mat img_cv_f;
+    //cv_bridge::CvImageConstPtr cv_ptr;
+    //cv_ptr = cv_bridge::toCvShare( msg_1 );
+    //cv_ptr->image.copyTo(img_cv);
+    //img_cv.convertTo(img_cv_f, CV_32FC1);
+    //cv::normalize(img_cv_f, img_cv_f, 0, 1, cv::NORM_MINMAX, CV_32FC1);
+    //cv::imshow(WINDOW1, img_cv_f);
+    //cv::waitKey (30);
+
+
 }
 
 void camerainfoCb(const sensor_msgs::CameraInfoConstPtr&  info){
@@ -74,13 +86,15 @@ int main(int argc, char** argv)
         exit(1);
     }
 
+    cv::namedWindow( WINDOW1, cv::WINDOW_AUTOSIZE );
+
     ros::init(argc, argv, "easyDepthCalibDumper");
     ros::NodeHandle nh_("~");
     nh_.param("imageTopic",imageTopic,std::string("/camera/depth/image_raw"));
     nh_.param("cameraInfoTopic",cameraInfoTopic,std::string("/camera/depth/camera_info"));
     nh_.param("logFile",logFile,std::string("out.mal"));
     nh_.param("outputDirectory",outputDirectory,std::string("."));
-    
+
     std::cout<<"Creating [logFile] to "<<outputDirectory<<logFile<<std::endl;
     char logfilepath[100];
     mkdir(outputDirectory.c_str(), 0700);
