@@ -51,7 +51,7 @@ add_executable(batchCalibration	src/offlineCalibration/batchCalibration.cpp)
 target_link_libraries(batchCalibration types calibration ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 #TYPES SHARED LIBRARY
-add_library(types SHARED    
+add_library(types SHARED
 src/types/planeCloud.h 		src/types/planeCloud.cpp
 src/types/pointCloud.h 		src/types/pointCloud.cpp
 src/types/laserData.h 		src/types/laserData.cpp)
