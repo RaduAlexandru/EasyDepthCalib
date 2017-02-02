@@ -333,6 +333,8 @@ void calibrationMatrix::serializeNN(char* filename){
 //-----------------------------------------------------------------------------------LOAD FROM FILE
 
 calibrationMatrix::calibrationMatrix(char* filename){
+    layers=rows=cols=0;
+    
     std::ifstream myfile (filename);
 
     if (!myfile.is_open()){

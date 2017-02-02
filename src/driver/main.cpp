@@ -183,6 +183,12 @@ int main(int argc, char **argv)
     n.param("calib", _calib, string("calib.mal"));
 
     multiplier = new calibrationMatrix(const_cast<char*>(_calib.c_str()));
+    //check if the multiplier was actually created
+    if (multiplier->layers==0){
+      std::cout << "multiplier matrix not created" << std::endl;
+      return 2;
+    }
+
     initialize();
 
     it= new image_transport::ImageTransport(n);
